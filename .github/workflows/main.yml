@@ -16,59 +16,61 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+          java-version: '21'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
-      - name: Install Dependencies
+      - name: Install Project Dependencies
         run: |
           npm install --include=optional
           npm install --no-save @tailwindcss/oxide-linux-x64-gnu 2>/dev/null || true
 
-      - name: Build Web Assets (Vite)
+      - name: Build Web Dist
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://shcvlcrdjcaslqrapudx.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoY3ZsY3JkamNhc2xxcmFwdWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MDk1NDUsImV4cCI6MjEwNDA4NTU0NX0.YILx2dwA9GtGl2oNsCXHbfgNxid7397fPVjaXFHt_JM' }}
         run: npm run build
 
-      - name: Initialize Capacitor & Android Platform
+      - name: Setup Capacitor Config & Android
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install --save @capacitor/core @capacitor/cli @capacitor/android
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.tgp.management",
             "appName": "TGP Management",
-            "webDir": "dist",
-            "server": {
-              "cleartext": true
-            }
+            "webDir": "dist"
           }
+          EOF
+          cat << 'EOF' > capacitor.config.ts
+          import type { CapacitorConfig } from '@capacitor/cli';
+          const config: CapacitorConfig = {
+            appId: 'com.tgp.management',
+            appName: 'TGP Management',
+            webDir: 'dist'
+          };
+          export default config;
           EOF
           npx cap add android
           npx cap sync android
 
-      - name: Compile Android APK
+      - name: Accept Android Licenses & Build APK
         run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses 2>/dev/null || true
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK to Artifacts
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tgp-management-apk
+          name: TGP-Management-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
