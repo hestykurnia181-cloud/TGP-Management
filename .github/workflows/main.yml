@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   extract-and-commit:
@@ -29,10 +28,6 @@ jobs:
             mkdir -p temp_unzip
             unzip -q -o "$ZIP_FILE" -d temp_unzip
             
-            # Hapus folder .github dari hasil extract agar tidak memicu proteksi workflow GitHub
-            rm -rf temp_unzip/.github
-            find temp_unzip -name ".github" -exec rm -rf {} + 2>/dev/null || true
-            
             # Cek jika isi zip terbungkus dalam satu subfolder
             NUM_ITEMS=$(ls -1 temp_unzip | wc -l)
             FIRST_ITEM=$(ls -1 temp_unzip | head -n 1)
@@ -42,11 +37,9 @@ jobs:
               cp -r temp_unzip/$FIRST_ITEM/. .
             else
               echo "Memindahkan isi zip ke root..."
+              rm -rf temp_unzip/.github
               cp -r temp_unzip/. .
             fi
-            
-            # Kembalikan file workflow asli repo agar tidak tertimpa
-            git checkout HEAD -- .github/workflows/ 2>/dev/null || true
             
             # Hapus folder sementara dan file zip
             rm -rf temp_unzip
@@ -55,7 +48,13 @@ jobs:
             # Konfigurasi Git untuk commit otomatis
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            
+            # Tambahkan semua file baru hasil ekstrak
             git add -A
+            
+            # PENTING: Jangan sentuh folder .github agar tidak memicu proteksi permission
+            git reset HEAD .github/ 2>/dev/null || true
+            git checkout HEAD -- .github/ 2>/dev/null || true
             
             if git diff --staged --quiet; then
               echo "Tidak ada perubahan file baru."
@@ -75,7 +74,7 @@ jobs:
             echo "pkg_exists=true" >> $GITHUB_OUTPUT
           else
             echo "pkg_exists=false" >> $GITHUB_OUTPUT
-            echo "package.json belum ada. Melewati build."
+            echo "package.json belum ada karena file ZIP belum di-upload. Melewati langkah build."
           fi
 
       - name: Setup Node.js
