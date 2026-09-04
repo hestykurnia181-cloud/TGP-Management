@@ -60,10 +60,3 @@ jobs:
           name: tgp-management-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-      - name: Build Check
-        if: steps.check_pkg.outputs.pkg_exists == 'true'
-        continue-on-error: true
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://shcvlcrdjcaslqrapudx.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoY3ZsY3JkamNhc2xxcmFwdWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MDk1NDUsImV4cCI6MjEwNDA4NTU0NX0.YILx2dwA9GtGl2oNsCXHbfgNxid7397fPVjaXFHt_JM' }}
-        run: npm run build
